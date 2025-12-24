@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useForm } from 'react-hook-form';
 import toast, { Toaster } from 'react-hot-toast';
@@ -17,15 +18,24 @@ interface RegisterForm extends LoginForm {
 
 export default function Home() {
   const [isLogin, setIsLogin] = useState(true);
-  const { login, register } = useAuth();
+  const { login, register, user } = useAuth(); //
+  const router = useRouter();
   
   const loginForm = useForm<LoginForm>();
   const registerForm = useForm<RegisterForm>();
+
+  // Auto-redirect if user is already logged in
+  useEffect(() => {
+    if (user) {
+      router.push('/dashboard');
+    }
+  }, [user, router]);
 
   const handleLogin = async (data: LoginForm) => {
     try {
       await login(data.email, data.password);
       toast.success('Welcome back!');
+      router.push('/dashboard'); // Immediate redirect on success
     } catch (error: any) {
       toast.error(error.message || 'Login failed');
     }
@@ -35,6 +45,7 @@ export default function Home() {
     try {
       await register(data.email, data.password, data.username);
       toast.success('Account created successfully!');
+      // Register usually triggers an auth state change that the useEffect handles
     } catch (error: any) {
       toast.error(error.message || 'Registration failed');
     }
@@ -57,7 +68,7 @@ export default function Home() {
               </label>
               <input
                 type="email"
-                autoComplete="email"
+                autoComplete="email" // Optimizes browser behavior
                 {...loginForm.register('email', { required: 'Email is required' })}
                 className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white focus:border-purple-500 outline-none transition-all"
                 placeholder="demo1@syncycle.com"
@@ -70,7 +81,7 @@ export default function Home() {
               </label>
               <input
                 type="password"
-                autoComplete="current-password"
+                autoComplete="current-password" // Resolves browser DOM warning
                 {...loginForm.register('password', { required: 'Password is required' })}
                 className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white focus:border-purple-500 outline-none transition-all"
                 placeholder="••••••••"
@@ -115,7 +126,7 @@ export default function Home() {
               </label>
               <input
                 type="password"
-                autoComplete="new-password"
+                autoComplete="new-password" // Resolves browser DOM warning
                 {...registerForm.register('password', { required: 'Password is required' })}
                 className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white focus:border-purple-500 outline-none transition-all"
                 placeholder="Create a password"
