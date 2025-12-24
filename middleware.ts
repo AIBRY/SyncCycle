@@ -6,20 +6,22 @@ export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
   const supabase = createMiddlewareClient({ req, res });
 
-  // Check if we have a session
+  // Refresh session if expired - this is required for Server Components
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
-  // If there is no session and the user is trying to access a protected route
-  if (!session && req.nextUrl.pathname !== '/') {
+  const pathname = req.nextUrl.pathname;
+
+  // 1. Redirect to login if no session and trying to access a protected route
+  if (!session && pathname !== '/') {
     const url = req.nextUrl.clone();
     url.pathname = '/';
     return NextResponse.redirect(url);
   }
 
-  // If there is a session and the user is on the login page, send them to dashboard
-  if (session && req.nextUrl.pathname === '/') {
+  // 2. Redirect to dashboard if logged in and trying to access the login page
+  if (session && pathname === '/') {
     const url = req.nextUrl.clone();
     url.pathname = '/dashboard';
     return NextResponse.redirect(url);
@@ -28,15 +30,14 @@ export async function middleware(req: NextRequest) {
   return res;
 }
 
-// Specify which routes this middleware should run on
 export const config = {
   matcher: [
-    '/dashboard/:path*',
-    '/finance/:path*',
-    '/goals/:path*',
-    '/bpd-tracker/:path*',
-    '/retro/:path*',
-    '/lists/:path*',
-    '/',
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
+    '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 };
