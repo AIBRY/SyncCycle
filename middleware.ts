@@ -6,38 +6,29 @@ export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
   const supabase = createMiddlewareClient({ req, res });
 
-  // Refresh session if expired - this is required for Server Components
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  // This refreshes the session and makes it available to the server
+  const { data: { session } } = await supabase.auth.getSession();
 
-  const pathname = req.nextUrl.pathname;
+  const isAuthPage = req.nextUrl.pathname === '/';
+  const isProtectedRoute = 
+    req.nextUrl.pathname.startsWith('/dashboard') || 
+    req.nextUrl.pathname.startsWith('/finance') ||
+    req.nextUrl.pathname.startsWith('/goals') ||
+    req.nextUrl.pathname.startsWith('/bpd-tracker');
 
-  // 1. Redirect to login if no session and trying to access a protected route
-  if (!session && pathname !== '/') {
-    const url = req.nextUrl.clone();
-    url.pathname = '/';
-    return NextResponse.redirect(url);
+  // If no session and trying to access protected route -> Login
+  if (!session && isProtectedRoute) {
+    return NextResponse.redirect(new URL('/', req.url));
   }
 
-  // 2. Redirect to dashboard if logged in and trying to access the login page
-  if (session && pathname === '/') {
-    const url = req.nextUrl.clone();
-    url.pathname = '/dashboard';
-    return NextResponse.redirect(url);
+  // If session exists and trying to access login -> Dashboard
+  if (session && isAuthPage) {
+    return NextResponse.redirect(new URL('/dashboard', req.url));
   }
 
   return res;
 }
 
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
-    '/((?!_next/static|_next/image|favicon.ico).*)',
-  ],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };

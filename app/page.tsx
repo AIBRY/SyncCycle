@@ -1,51 +1,35 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useForm } from 'react-hook-form';
 import toast, { Toaster } from 'react-hot-toast';
 
-// Interfaces defined at the top to fix the "Cannot find name" Type error
-interface LoginForm {
-  email: string;
-  password: string;
-}
-
-interface RegisterForm extends LoginForm {
-  username: string;
-}
+interface LoginForm { email: string; password: string; }
+interface RegisterForm extends LoginForm { username: string; }
 
 export default function Home() {
   const [isLogin, setIsLogin] = useState(true);
-  const { login, register, user } = useAuth(); //
-  const router = useRouter();
-  
-  const loginForm = useForm<LoginForm>();
-  const registerForm = useForm<RegisterForm>();
+  const { login, register, user } = useAuth();
+  const { register: regLogin, handleSubmit: handleLoginSubmit } = useForm<LoginForm>();
+  const { register: regSignup, handleSubmit: handleSignupSubmit } = useForm<RegisterForm>();
 
-  // Auto-redirect if user is already logged in
-  useEffect(() => {
-    if (user) {
-      router.push('/dashboard');
-    }
-  }, [user, router]);
-
-  const handleLogin = async (data: LoginForm) => {
+  const onLogin = async (data: LoginForm) => {
     try {
       await login(data.email, data.password);
-      toast.success('Welcome back!');
-      router.push('/dashboard'); // Immediate redirect on success
+      toast.success('Logging in...');
+      // Force a hard reload to sync cookies with Middleware
+      window.location.href = '/dashboard';
     } catch (error: any) {
       toast.error(error.message || 'Login failed');
     }
   };
 
-  const handleRegister = async (data: RegisterForm) => {
+  const onRegister = async (data: RegisterForm) => {
     try {
       await register(data.email, data.password, data.username);
-      toast.success('Account created successfully!');
-      // Register usually triggers an auth state change that the useEffect handles
+      toast.success('Account created! Please sign in.');
+      setIsLogin(true);
     } catch (error: any) {
       toast.error(error.message || 'Registration failed');
     }
@@ -55,108 +39,25 @@ export default function Home() {
     <div className="min-h-screen flex items-center justify-center bg-gray-900 px-4">
       <Toaster position="top-right" />
       <div className="bg-gray-800 border border-gray-700 p-8 rounded-2xl w-full max-w-md shadow-2xl">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-extrabold text-purple-400 mb-2 tracking-tight">SyncCycle</h1>
-          <p className="text-gray-400">Couple productivity with BPD support</p>
-        </div>
-
+        <h1 className="text-4xl font-extrabold text-purple-400 mb-6 text-center">SyncCycle</h1>
+        
         {isLogin ? (
-          <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-5">
-            <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-2">
-                Email Address
-              </label>
-              <input
-                type="email"
-                autoComplete="email" // Optimizes browser behavior
-                {...loginForm.register('email', { required: 'Email is required' })}
-                className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white focus:border-purple-500 outline-none transition-all"
-                placeholder="demo1@syncycle.com"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-2">
-                Password
-              </label>
-              <input
-                type="password"
-                autoComplete="current-password" // Resolves browser DOM warning
-                {...loginForm.register('password', { required: 'Password is required' })}
-                className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white focus:border-purple-500 outline-none transition-all"
-                placeholder="••••••••"
-              />
-            </div>
-
-            <button type="submit" className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-lg shadow-lg transition-colors">
-              Sign In
-            </button>
+          <form onSubmit={handleLoginSubmit(onLogin)} className="space-y-5">
+            <input {...regLogin('email')} type="email" placeholder="Email" className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white" required />
+            <input {...regLogin('password')} type="password" placeholder="Password" className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white" required />
+            <button type="submit" className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-lg">Sign In</button>
           </form>
         ) : (
-          <form onSubmit={registerForm.handleSubmit(handleRegister)} className="space-y-5">
-            <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-2">
-                Username
-              </label>
-              <input
-                type="text"
-                autoComplete="username"
-                {...registerForm.register('username', { required: 'Username is required' })}
-                className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white focus:border-purple-500 outline-none transition-all"
-                placeholder="Choose a username"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-2">
-                Email Address
-              </label>
-              <input
-                type="email"
-                autoComplete="email"
-                {...registerForm.register('email', { required: 'Email is required' })}
-                className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white focus:border-purple-500 outline-none transition-all"
-                placeholder="Enter your email"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-2">
-                Password
-              </label>
-              <input
-                type="password"
-                autoComplete="new-password" // Resolves browser DOM warning
-                {...registerForm.register('password', { required: 'Password is required' })}
-                className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white focus:border-purple-500 outline-none transition-all"
-                placeholder="Create a password"
-              />
-            </div>
-
-            <button type="submit" className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-lg shadow-lg transition-colors">
-              Create Account
-            </button>
+          <form onSubmit={handleSignupSubmit(onRegister)} className="space-y-5">
+            <input {...regSignup('username')} type="text" placeholder="Username" className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white" required />
+            <input {...regSignup('email')} type="email" placeholder="Email" className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white" required />
+            <input {...regSignup('password')} type="password" placeholder="Password" className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white" required />
+            <button type="submit" className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-lg">Create Account</button>
           </form>
         )}
-
-        <div className="mt-8 text-center">
-          <button
-            onClick={() => setIsLogin(!isLogin)}
-            className="text-purple-400 hover:text-purple-300 text-sm font-medium transition-colors"
-          >
-            {isLogin
-              ? "Don't have an account? Sign up"
-              : 'Already have an account? Sign in'}
-          </button>
-        </div>
-
-        <div className="mt-10 pt-6 border-t border-gray-700">
-          <p className="text-[10px] text-gray-500 text-center leading-relaxed">
-            DEMO ACCOUNTS:<br /> 
-            demo1@syncycle.com / demo2@syncycle.com<br />
-            PASSWORD: password123
-          </p>
-        </div>
+        <button onClick={() => setIsLogin(!isLogin)} className="w-full mt-4 text-purple-400 text-sm">
+          {isLogin ? "Need an account? Sign up" : "Have an account? Sign in"}
+        </button>
       </div>
     </div>
   );
